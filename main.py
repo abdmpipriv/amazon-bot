@@ -2,16 +2,32 @@ import asyncio
 import time
 import random
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from playwright.async_api import async_playwright
 from telegram import Bot
 
+# ====== CONFIG ======
 ASIN = "B0FZK3L04D"
-
 TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 bot = Bot(token=TOKEN)
 
+# ====== FAKE SERVER (for Render free) ======
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+def run_server():
+    server = HTTPServer(("0.0.0.0", 10000), Handler)
+    server.serve_forever()
+
+threading.Thread(target=run_server, daemon=True).start()
+
+# ====== SCRAPER ======
 async def get_price():
     url = f"https://www.amazon.de/dp/{ASIN}"
 
@@ -34,9 +50,11 @@ async def get_price():
         await browser.close()
         return price
 
+# ====== TELEGRAM ======
 async def send_alert(msg):
     await bot.send_message(chat_id=CHAT_ID, text=msg)
 
+# ====== LOOP ======
 last_price = None
 
 while True:
