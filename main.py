@@ -22,7 +22,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b"OK")
 
 def run_server():
-    server = HTTPServer(("0.0.0.0", 10000), Handler)
+    PORT = int(os.getenv("PORT", 10000))  # 🔥 مهم جدًا
+    server = HTTPServer(("0.0.0.0", PORT), Handler)
+    print(f"🌐 server running on port {PORT}")
     server.serve_forever()
 
 # ====== SCRAPER ======
@@ -77,5 +79,4 @@ def run_bot():
 # ====== RUN ======
 threading.Thread(target=run_bot, daemon=True).start()
 
-# السيرفر لازم يكون في main thread
 run_server()
