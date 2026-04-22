@@ -3,8 +3,6 @@ from bs4 import BeautifulSoup
 import time
 import random
 import os
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Bot
 
 # ====== CONFIG ======
@@ -13,17 +11,6 @@ TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 bot = Bot(token=TOKEN)
-
-# ====== SERVER ======
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"OK")
-
-def run_server():
-    server = HTTPServer(("0.0.0.0", 10000), Handler)
-    server.serve_forever()
 
 # ====== SCRAPER ======
 def get_price():
@@ -54,29 +41,22 @@ def send_alert(msg):
     print("📩 sending telegram...")
     bot.send_message(chat_id=CHAT_ID, text=msg)
 
-# ====== LOOP ======
-def run_bot():
-    last_price = None
-
-    while True:
-        try:
-            print("🔄 checking price...")
-            price = get_price()
-
-            if price and (last_price is None or price != last_price):
-                print("🔥 price changed!")
-                send_alert(f"🔥 السعر: {price}")
-                last_price = price
-
-            time.sleep(random.randint(30, 60))
-
-        except Exception as e:
-            print("❌ ERROR:", e)
-            time.sleep(60)
-
-# ====== RUN ======
-threading.Thread(target=run_server, daemon=True).start()
-threading.Thread(target=run_bot, daemon=True).start()
+# ====== MAIN LOOP ======
+last_price = None
 
 while True:
-    time.sleep(1000)
+    try:
+        print("🔄 checking price...")
+
+        price = get_price()
+
+        if price and (last_price is None or price != last_price):
+            print("🔥 price changed!")
+            send_alert(f"🔥 السعر: {price}")
+            last_price = price
+
+        time.sleep(random.randint(30, 60))
+
+    except Exception as e:
+        print("❌ ERROR:", e)
+        time.sleep(60)
