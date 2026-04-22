@@ -1,30 +1,32 @@
-def get_price():
-    print("🌐 Fetching Amazon...", flush=True)
+import requests
+import re
 
-    url = f"https://www.amazon.de/dp/{ASIN}"
+def get_price():
+    print("🌐 Fetching Amazon JSON...", flush=True)
+
+    url = f"https://www.amazon.de/gp/product/{ASIN}?th=1&psc=1"
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
-        "Accept": "text/html,application/xhtml+xml",
-        "Connection": "keep-alive"
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8"
     }
 
-    response = requests.get(url, headers=headers)
+    r = requests.get(url, headers=headers)
+    html = r.text
 
-    print("STATUS:", response.status_code, flush=True)
+    # 🔥 استخراج السعر من JSON embedded
+    patterns = [
+        r'"priceToPay"\s*:\s*\{"amount"\s*:\s*([\d\.]+)',
+        r'"price"\s*:\s*"([\d\,\.]+)"',
+        r'€\s?([\d\.,]+)'
+    ]
 
-    html = response.text
-
-    # 🔥 fallback parsing
-    import re
-
-    match = re.search(r'"priceToPay"\s*:\s*\{"amount"\s*:\s*([\d\.]+)', html)
-
-    if match:
-        price = match.group(1)
-        print("💰 FOUND PRICE:", price, flush=True)
-        return price
+    for p in patterns:
+        m = re.search(p, html)
+        if m:
+            price = m.group(1)
+            print("💰 FOUND PRICE:", price, flush=True)
+            return price
 
     print("❌ price not found", flush=True)
     return None
