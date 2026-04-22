@@ -29,6 +29,8 @@ threading.Thread(target=run_server, daemon=True).start()
 
 # ====== SCRAPER ======
 async def get_price():
+    print("🌐 opening amazon...")
+
     url = f"https://www.amazon.de/dp/{ASIN}"
 
     async with async_playwright() as p:
@@ -38,20 +40,27 @@ async def get_price():
         )
 
         page = await browser.new_page()
+
         await page.set_extra_http_headers({
             "User-Agent": "Mozilla/5.0"
         })
 
         await page.goto(url, timeout=60000)
-        await page.wait_for_selector("span.a-price")
+
+        print("⏳ waiting for price...")
+
+        await page.wait_for_selector("span.a-price", timeout=10000)
 
         price = await page.locator("span.a-price").first.inner_text()
+
+        print("💰 FOUND PRICE:", price)
 
         await browser.close()
         return price
 
 # ====== TELEGRAM ======
 async def send_alert(msg):
+    print("📩 sending telegram...")
     await bot.send_message(chat_id=CHAT_ID, text=msg)
 
 # ====== LOOP ======
@@ -59,15 +68,21 @@ last_price = None
 
 while True:
     try:
+        print("🔄 checking price...")
+
         price = asyncio.run(get_price())
 
-        if price != last_price:
-            print("🔥 السعر الجديد:", price)
+        print("✅ current price:", price)
+
+        if last_price is None or price != last_price:
+            print("🔥 price changed!")
+
             asyncio.run(send_alert(f"🔥 السعر: {price}"))
+
             last_price = price
 
         time.sleep(random.randint(30, 60))
 
     except Exception as e:
-        print("ERROR:", e)
+        print("❌ ERROR:", e)
         time.sleep(60)
