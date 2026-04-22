@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 import time
 import random
 import os
-import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Bot
 
@@ -22,14 +21,17 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b"OK")
 
 def run_server():
-    PORT = int(os.getenv("PORT", 10000))  # 🔥 مهم جدًا
+    PORT = int(os.getenv("PORT", 10000))
     server = HTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"🌐 server running on port {PORT}")
-    server.serve_forever()
+    print(f"🌐 Server running on port {PORT}", flush=True)
+
+    # نخلي السيرفر يعمل بدون ما يوقف البوت
+    import threading
+    threading.Thread(target=server.serve_forever, daemon=True).start()
 
 # ====== SCRAPER ======
 def get_price():
-    print("🌐 fetching amazon...")
+    print("🌐 Fetching Amazon...", flush=True)
 
     url = f"https://www.amazon.de/dp/{ASIN}"
 
@@ -45,38 +47,40 @@ def get_price():
 
     if price:
         price_text = price.text.strip()
-        print("💰 FOUND PRICE:", price_text)
+        print("💰 FOUND PRICE:", price_text, flush=True)
         return price_text
     else:
-        print("❌ price not found")
+        print("❌ price not found", flush=True)
         return None
 
 # ====== TELEGRAM ======
 def send_alert(msg):
-    print("📩 sending telegram...")
+    print("📩 Sending Telegram...", flush=True)
     bot.send_message(chat_id=CHAT_ID, text=msg)
 
-# ====== LOOP ======
+# ====== MAIN LOOP ======
 def run_bot():
+    print("🚀 Bot started!", flush=True)
+
     last_price = None
 
     while True:
         try:
-            print("🔄 checking price...")
+            print("🔄 Checking price...", flush=True)
+
             price = get_price()
 
             if price and (last_price is None or price != last_price):
-                print("🔥 price changed!")
+                print("🔥 Price changed!", flush=True)
                 send_alert(f"🔥 السعر: {price}")
                 last_price = price
 
-            time.sleep(random.randint(30, 60))
+            time.sleep(30)
 
         except Exception as e:
-            print("❌ ERROR:", e)
+            print("❌ ERROR:", e, flush=True)
             time.sleep(60)
 
 # ====== RUN ======
-threading.Thread(target=run_bot, daemon=True).start()
-
 run_server()
+run_bot()
